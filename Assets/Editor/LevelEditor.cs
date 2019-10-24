@@ -30,6 +30,7 @@ public class LevelEditor : EditorWindow
     public GameObject platformNormalPrefab;
     private GameObject coinPrefab;
     private GameObject heartPrefab;
+    public Texture texture;
 
     private Dictionary<int, PlatformInfo> dictionary = new Dictionary<int, PlatformInfo>();
     private bool isDeleteOn;
@@ -60,7 +61,9 @@ public class LevelEditor : EditorWindow
 
         coinPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Coin Prefab", coinPrefab, typeof(GameObject), false); 
         heartPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Heart Prefab", heartPrefab, typeof(GameObject), false );
-*/
+*/      
+        texture = (Texture)EditorGUILayout.ObjectField("Choose Texture", texture, typeof(Texture), false);
+
         gridSize = EditorGUILayout.IntField("Enter Grid Size" ,gridSize);
 
         saveLevelPath = EditorGUILayout.TextField("Path To Save Level", saveLevelPath);
@@ -127,19 +130,29 @@ public class LevelEditor : EditorWindow
             {
                 GUI.Box(new Rect(initialPosX, initialPosY , boxSize2, boxSize2), "Platform " + buttonIndex);
 
-                //Pickable Button
-                if(GUI.Button(new Rect(initialPosX , initialPosY + boxSize2 /2, buttonSize, buttonSize), "1"))
+                if(dictionary.ContainsKey(buttonIndex) )
                 {
-                    if(dictionary.ContainsKey(buttonIndex))
+                    switch(dictionary[buttonIndex].GetPickableType())
                     {
-                        dictionary[buttonIndex].ChangePickable(pickableType);
-                    }
-                    else
-                    {
-                        dictionary[buttonIndex] = new PlatformInfo(i, j, PlatformType.None, pickableType);
+                        case PickableType.Heart: 
+                            //Pickable Button
+                            if(GUI.Button(new Rect(initialPosX , initialPosY + boxSize2 /2, buttonSize, buttonSize), texture))
+                            {
+                                if(dictionary.ContainsKey(buttonIndex))
+                                {
+                                    dictionary[buttonIndex].ChangePickable(pickableType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, PlatformType.None, pickableType);
 
+                                }
+                            }
+                         break;
                     }
                 }
+
+
                 //Platform Button
                 if(GUI.Button(new Rect(initialPosX + boxSize2/2, initialPosY + boxSize2/2, buttonSize, buttonSize), "2"))
                 {
@@ -210,7 +223,7 @@ public class LevelEditor : EditorWindow
             if(platform != null) Instantiate(platform, kvp.Value.GetPosition(false), Quaternion.identity, parentObject.transform);
             if(pickable != null)
             {
-                Instantiate(pickable, kvp.Value.GetPosition(true), Quaternion.identity, parentObject.transform);
+                    Instantiate(pickable, kvp.Value.GetPosition(true), Quaternion.identity, parentObject.transform);
             } 
           
         }
