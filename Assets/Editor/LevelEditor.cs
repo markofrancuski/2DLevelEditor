@@ -20,17 +20,33 @@ public enum PickableType
 public class LevelEditor : EditorWindow 
 {
     public static int levelNumber; 
+
     private int gridSize;
     private Vector3 spawnObjectPosition = new Vector3(0f, 0.5f, 0f);
+    private string saveLevelPath = "Assets/Prefabs/Level/";
+
     public PlatformType platformType;
     public PickableType pickableType;
-    private string saveLevelPath = "Assets/Prefabs/Level/";
+
+    #region Prefabs
     private GameObject platformGrassPrefab;
-    [SerializeField] private GameObject platformGlassPrefab;
-    public GameObject platformNormalPrefab;
+    private GameObject platformGlassPrefab;
+    private GameObject platformNormalPrefab;
     private GameObject coinPrefab;
     private GameObject heartPrefab;
-    public Texture texture;
+    #endregion
+
+    #region Textures
+    private Texture heartTexture;
+    private Texture coinTexture;
+    private Texture defaultTexture;
+
+    private Texture grassPlatformTexture;
+    private Texture glassPlatformTexture;
+    private Texture normalPlatformTexture;
+    private Texture defaultPlatformTexture;
+
+    #endregion
 
     private Dictionary<int, PlatformInfo> dictionary = new Dictionary<int, PlatformInfo>();
     private bool isDeleteOn;
@@ -40,10 +56,26 @@ public class LevelEditor : EditorWindow
     {
         Debug.Log("Loading Assets");
 
+        #region Loading Prefabs
         platformGrassPrefab = Resources.Load<GameObject>("PlatformGrass");
         platformGlassPrefab = Resources.Load<GameObject>("PlatformGlass");
-        coinPrefab = Resources.Load<GameObject>("Coin");
+        platformNormalPrefab = Resources.Load<GameObject>("PlatformNormal");
         heartPrefab = Resources.Load<GameObject>("Heart");
+        coinPrefab = Resources.Load<GameObject>("Coin");
+        #endregion
+
+        #region Loading Textures
+        heartTexture = Resources.Load<Texture>("Sprites/Heart");
+        coinTexture = Resources.Load<Texture>("Sprites/Coin");
+        defaultTexture = Resources.Load<Texture>("Sprites/White1x1");
+
+        grassPlatformTexture = Resources.Load<Texture>("Sprites/grass");
+        glassPlatformTexture = Resources.Load<Texture>("Sprites/glass");
+        normalPlatformTexture = Resources.Load<Texture>("Sprites/NormalPlatform");
+        defaultPlatformTexture = Resources.Load<Texture>("Sprites/White1x1");
+
+        #endregion
+
         gridSize = 5;
     }
 
@@ -52,17 +84,17 @@ public class LevelEditor : EditorWindow
     {
         GetWindow<LevelEditor>("Level Generator");
     }
+
     private void OnGUI() 
     {
         //Prefab to spawn
-/*        platformGrassPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Grass Platform Prefab", platformGrassPrefab, typeof(GameObject), false); 
-        platformGlassPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Glass Platform Prefab", platformGlassPrefab, typeof(GameObject), false); 
-        platformNormalPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Normal Platform Prefab", platformNormalPrefab, typeof(GameObject), false); 
+        /*        platformGrassPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Grass Platform Prefab", platformGrassPrefab, typeof(GameObject), false); 
+                platformGlassPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Glass Platform Prefab", platformGlassPrefab, typeof(GameObject), false); 
+                platformNormalPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Normal Platform Prefab", platformNormalPrefab, typeof(GameObject), false); 
 
-        coinPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Coin Prefab", coinPrefab, typeof(GameObject), false); 
-        heartPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Heart Prefab", heartPrefab, typeof(GameObject), false );
-*/      
-        texture = (Texture)EditorGUILayout.ObjectField("Choose Texture", texture, typeof(Texture), false);
+                coinPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Coin Prefab", coinPrefab, typeof(GameObject), false); 
+                heartPrefab = (GameObject) EditorGUILayout.ObjectField("Choose Heart Prefab", heartPrefab, typeof(GameObject), false );
+        */
 
         gridSize = EditorGUILayout.IntField("Enter Grid Size" ,gridSize);
 
@@ -107,15 +139,57 @@ public class LevelEditor : EditorWindow
         isDeleteOn = GUILayout.Toggle(isDeleteOn, "Remove");
 
         //Creates the grid
-        CreateGrid(gridSize, 25, 10, 50, 300, "Level Grid", 25);
-        
+        CreateGrid(gridSize, 25, 25, 50, 200, "Level Grid", 25);
+
+        if (GUILayout.Button("Testing popup"))
+        {
+            isPlatformClick = !isPlatformClick;
+        }
+
+        if (isPlatformClick)
+        {
+            Debug.Log(previousSelectedPlatform);
+
+            //We selected something new
+            if (previousSelectedPlatform != selectedPlatformIndex)
+            {
+                previousSelectedPlatform = selectedPlatform;
+                //ChangePlatformType();
+                isPlatformClick = false;
+            }
+            else
+            {
+                selectedPlatformIndex = EditorGUI.Popup(new Rect(50, 50, 100, 50), selectedPlatformIndex, platformStrings);
+            }
+
+        }
+
+           
         //i* 4 + j for number in row in grid
-    }  
+    }
+
+    private bool isPlatformClick = false;
+    private bool isPickableClick = false;
+
+    private int selectedPlatformIndex;
+    private int previousSelectedPlatform = 3;
+
+    //private PlatformType
+    private string[] platformStrings = new string[4] { "Grass", "Glass", "Normal", "None" };
+    private string[] pickableStrings = new string[3] { "Coin", "Heart", "None" };
+
+    private int selectedPlatform;
+
+    //private void ChangePlatformType()
+    //{
+    //    dictionary[selectedPlatform].ChangePlatform(PlatformType.)
+    //}
+
     private void CreateGrid(int gridSize, float buttonSize, float spaceBetween, float posX, float posY, string boxName, float boxOffset)
     {
         float initialPosY = posY;
         float initialPosX = posX;
-        float boxSize2 = 10+ buttonSize*2;
+        float boxSize2 = 10+ buttonSize*3 ; // *2
 
         float boxSize = gridSize * boxSize2 + (gridSize - 1) * spaceBetween/2;
 
@@ -130,15 +204,15 @@ public class LevelEditor : EditorWindow
             {
                 GUI.Box(new Rect(initialPosX, initialPosY , boxSize2, boxSize2), "Platform " + buttonIndex);
 
-                if(dictionary.ContainsKey(buttonIndex) )
+                //Pickable Button
+                if (dictionary.ContainsKey(buttonIndex))
                 {
-                    switch(dictionary[buttonIndex].GetPickableType())
+                    switch (dictionary[buttonIndex].GetPickableType())
                     {
-                        case PickableType.Heart: 
-                            //Pickable Button
-                            if(GUI.Button(new Rect(initialPosX , initialPosY + boxSize2 /2, buttonSize, buttonSize), texture))
+                        case PickableType.Heart:
+                            if (GUI.Button(new Rect(initialPosX, initialPosY + boxSize2 / 2 - 20, buttonSize*3, buttonSize), heartTexture))
                             {
-                                if(dictionary.ContainsKey(buttonIndex))
+                                if (dictionary.ContainsKey(buttonIndex))
                                 {
                                     dictionary[buttonIndex].ChangePickable(pickableType);
                                 }
@@ -148,35 +222,157 @@ public class LevelEditor : EditorWindow
 
                                 }
                             }
-                         break;
+                            break;
+                        case PickableType.Coin:
+                            if (GUI.Button(new Rect(initialPosX, initialPosY + boxSize2 / 2 - 20, buttonSize*3, buttonSize), coinTexture))
+                            {
+                                if (dictionary.ContainsKey(buttonIndex))
+                                {
+                                    dictionary[buttonIndex].ChangePickable(pickableType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, PlatformType.None, pickableType);
+
+                                }
+                            }
+                            break;
+                        case PickableType.None:
+                            if (GUI.Button(new Rect(initialPosX, initialPosY + boxSize2 / 2 - 20, buttonSize * 3, buttonSize), defaultTexture))
+                            {
+                                if (dictionary.ContainsKey(buttonIndex))
+                                {
+                                    dictionary[buttonIndex].ChangePickable(pickableType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, PlatformType.None, pickableType);
+
+                                }
+                            }
+                            break;
                     }
                 }
+                else
+                {
+                    if (GUI.Button(new Rect(initialPosX , initialPosY + boxSize2 / 2 - 20, buttonSize*3, buttonSize), defaultTexture))
+                    {
+                        if (dictionary.ContainsKey(buttonIndex))
+                        {
+                            dictionary[buttonIndex].ChangePickable(pickableType);
+                        }
+                        else
+                        {
+                            dictionary[buttonIndex] = new PlatformInfo(i, j, PlatformType.None, pickableType);
 
+                        }
+                    }
+                }
 
                 //Platform Button
-                if(GUI.Button(new Rect(initialPosX + boxSize2/2, initialPosY + boxSize2/2, buttonSize, buttonSize), "2"))
+                if(dictionary.ContainsKey(buttonIndex))
                 {
-                    if(dictionary.ContainsKey(buttonIndex))
+                    switch (dictionary[buttonIndex].GetPlatformType())
                     {
-                        dictionary[buttonIndex].ChangePlatform(platformType);
-                    }
-                    else
-                    {
-                        dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+                        case PlatformType.Grass:
+                            if (GUI.Button(new Rect(initialPosX + boxSize2 / 2 - 41, initialPosY + boxSize2 / 2 + 5, buttonSize * 3, buttonSize), grassPlatformTexture))
+                            {
+                                if (dictionary[buttonIndex].GetPlatformType() != PlatformType.None)
+                                {
+                                    dictionary[buttonIndex].ChangePlatform(platformType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+                                }
+                            }
+                            break;
+                        case PlatformType.Glass:
+                            if (GUI.Button(new Rect(initialPosX + boxSize2 / 2 - 41, initialPosY + boxSize2 / 2 + 5, buttonSize * 3, buttonSize), glassPlatformTexture))
+                            {
+                                if (dictionary[buttonIndex].GetPlatformType() != PlatformType.None)
+                                {
+                                    dictionary[buttonIndex].ChangePlatform(platformType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+
+                                }
+                            }
+                            break;
+                        case PlatformType.Normal:
+                            if (GUI.Button(new Rect(initialPosX + boxSize2 / 2 - 41, initialPosY + boxSize2 / 2 + 5, buttonSize * 3, buttonSize), normalPlatformTexture))
+                            {
+                                if (dictionary[buttonIndex].GetPlatformType() != PlatformType.None) //dictionary.ContainsKey(buttonIndex)
+                                {
+                                    dictionary[buttonIndex].ChangePlatform(platformType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+
+                                }
+                            }
+                            break;
+                        case PlatformType.None:
+                            if (GUI.Button(new Rect(initialPosX + boxSize2 / 2 - 41, initialPosY + boxSize2 / 2 + 5, buttonSize * 3, buttonSize), defaultPlatformTexture))
+                            {
+                                if (dictionary.ContainsKey(buttonIndex))
+                                {
+                                    dictionary[buttonIndex].ChangePlatform(platformType);
+                                }
+                                else
+                                {
+                                    dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+
+                                }
+                            }
+                            break;
+                        default:
+                            break;
                     }
                 }
-                
-                //GUI.Box(new Rect(initialPosX));
+                else
+                {
+                    if (GUI.Button(new Rect(initialPosX + boxSize2 / 2 - 41, initialPosY + boxSize2 / 2 + 5, buttonSize * 3, buttonSize), defaultPlatformTexture))
+                    {
+                        if (dictionary.ContainsKey(buttonIndex))
+                        {
+                            dictionary[buttonIndex].ChangePlatform(platformType);
+                        }
+                        else
+                        {
+                            dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
 
+                        }
+                        //dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+                    }
+                }
+
+                //Platform Button
+                //if (GUI.Button(new Rect(initialPosX + boxSize2 /2 - 41, initialPosY + boxSize2/2 + 5, buttonSize*3, buttonSize), "2"))
+                //{
+                //    if(dictionary.ContainsKey(buttonIndex))
+                //    {
+                //        dictionary[buttonIndex].ChangePlatform(platformType);
+                //    }
+                //    else
+                //    {
+                //        dictionary[buttonIndex] = new PlatformInfo(i, j, platformType, PickableType.None);
+                //    }
+                //}
+                
                 initialPosX += buttonSize + spaceBetween + boxSize2 / 2;
                 buttonIndex++;
             }
-            initialPosY += buttonSize + spaceBetween + boxSize2 / 2;
+            initialPosY += buttonSize + spaceBetween + boxSize2 / 2 ;
             initialPosX = posX;
         }
         GUI.color = Color.white;
 
     }
+
     private GameObject GetPrefab(PlatformType type)
     {
         switch (type)
@@ -194,6 +390,7 @@ public class LevelEditor : EditorWindow
             return null;
         }
     }
+
     private GameObject GetPickable(PickableType type)
     {
         switch(type)
@@ -203,6 +400,7 @@ public class LevelEditor : EditorWindow
             default: return null;
         }
     }
+
     private void SpawnSelected()
     {
         levelNumber++;
